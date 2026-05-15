@@ -25,6 +25,7 @@ telemetry_data_record   =[]
 
 def setup_simulation():
     #connection to krpc 
+    global krpc_connection, space_center, active_vessel, telemetry_manager, vessel_controller, simulation_controller
     print("initiate krpc client")
     try:
         krpc_connection=krpc.connect(name="simulation")
@@ -39,7 +40,9 @@ def setup_simulation():
     print("krpc connection successful")
     #setup simulation functions
     try:
-        telemtry_manager= TelemetryManager(active_vessel)
+        telemetry_manager = TelemetryManager(active_vessel,krpc_connection)
+        telemetry_manager= TelemetryManager(active_vessel,krpc_connection)
+        telemetry_manager.set_up_telemetry_streams()
         vessel_controller=VesselController()
         simulation_controller=SimulationController()
         
@@ -54,6 +57,7 @@ def run_simulation():
     time.sleep(1)
     while is_running_simulation:
         time.sleep(const.SIMULATION_SLEEP)
+        #TODO Call to telemetry manager
         check_simulation_termination()
     time.sleep(1)
     print("simulation finished")
