@@ -33,6 +33,8 @@ def setup_simulation():
         space_center   =krpc_connection.space_center
         active_vessel.auto_pilot.target_pitch_and_heading(const.INITIAL_PTCH,const.INITIAL_HEADING)
         active_vessel.control.throttle=const.INITIAL_THROTTLE
+        active_vessel.control.sas=True
+        active_vessel.control.rcs=False
     except Exception as e:
         print(f'krpc connection failed: {e}')
         return False
@@ -40,7 +42,6 @@ def setup_simulation():
     print("krpc connection successful")
     #setup simulation functions
     try:
-        telemetry_manager = TelemetryManager(active_vessel,krpc_connection)
         telemetry_manager= TelemetryManager(active_vessel,krpc_connection)
         telemetry_manager.set_up_telemetry_streams()
         vessel_controller=VesselController()
@@ -57,18 +58,28 @@ def run_simulation():
     time.sleep(1)
     while is_running_simulation:
         time.sleep(const.SIMULATION_SLEEP)
-        #TODO Call to telemetry manager
+        telemetry_data=telemetry_manager.stream_telemetry_data()
+        flight_data     =pd.DataFrame(telemetry_data[0])
+        orbit_data      =pd.DataFrame(telemetry_data[1])
+        resource_data   =pd.DataFrame(telemetry_data[2])
+        
+        flight_data.to_csv('flight_data.csv')
+        orbit_data.to_csv('orbit_data.csv')
+        resource_data.to_csv('resource_data.csv')
+        
         check_simulation_termination()
     time.sleep(1)
     print("simulation finished")
     
     
-
+ 
 def post_simulation_processing():
     pass
 
 
-def check_simulation_termination():
+def check_simulation_termination(resource_data):
+    if(resource_data['SolidFuel']==0):
+        is_running_simulation=False
     return is_running_simulation
 
 
@@ -76,3 +87,4 @@ if __name__=="__main__":
     setup_simulation()
     run_simulation()
     post_simulation_processing()
+    print("simulation finished")

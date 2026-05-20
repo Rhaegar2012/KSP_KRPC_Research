@@ -12,7 +12,7 @@ class TelemetryManager():
             self.flight_info=self.vessel.flight()
             self.orbit=self.vessel.orbit
             self.resources=self.vessel.resources
-            self.available_resources=self.resources.names() #list of stored resources
+            self.available_resources=self.resources #list of stored resources
             self.flight_telemetry_callback={}
             self.orbit_telemetry_callback={}
             self.resource_telemetry_callback={}
@@ -35,9 +35,7 @@ class TelemetryManager():
                                      for i in range(len(collections.orbit_telemetry_data))}
         
         self.resource_telemetry_callback={self.available_resources[i]:(self.resources,'amount',self.available_resources[i])
-                                        for i in range(len(self.available_resources))}
-        self.resource_telemetry_callback={name:(self.resources.amount, name)
-                                        for name in self.available_resources}
+                                        for i in range(len(self.available_resources.names))}
         
         #2.Set up connection streams 
         
@@ -47,8 +45,6 @@ class TelemetryManager():
         self.orbit_telemetry_stream={name:self.conn.add_stream(getattr,obj,attr) 
                                      for name,(obj,attr) in self.orbit_telemetry_callback.items()}
         
-        self.orbit_telemetry_stream={name:self.conn.add_stream(getattr,obj,attr) 
-                                     for name,(obj,attr)in self.resource_telemetry_callback.items()}
         self.resource_telemetry_stream={name:self.conn.add_stream(func,arg) 
                                      for name,(func,arg)in self.resource_telemetry_callback.items()}
         
