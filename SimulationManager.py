@@ -16,7 +16,7 @@ active_vessel           = None
 telemetry_manager       = None
 vessel_controller       = None
 simulation_controller   = None
-is_running_simulation   = True
+
 
 #Telemetry Data
 telemetry_data_snapshot ={}
@@ -55,20 +55,23 @@ def setup_simulation():
 
 def run_simulation():
     print("begin simulation")
+    is_running_simulation   = True
     time.sleep(1)
     while is_running_simulation:
         time.sleep(const.SIMULATION_SLEEP)
         telemetry_data=telemetry_manager.stream_telemetry_data()
-        flight_data     =pd.DataFrame(telemetry_data[0])
-        orbit_data      =pd.DataFrame(telemetry_data[1])
-        resource_data   =pd.DataFrame(telemetry_data[2])
-        
-        flight_data.to_csv('flight_data.csv')
-        orbit_data.to_csv('orbit_data.csv')
-        resource_data.to_csv('resource_data.csv')
-        
-        check_simulation_termination()
+        print(telemetry_data)
+        telemetry_data_record.append(telemetry_data)
+        if terminate_simulation(telemetry_data[2]):
+            is_running_simulation=False
     time.sleep(1)
+    flight_data     =pd.DataFrame(telemetry_data[0])
+    orbit_data      =pd.DataFrame(telemetry_data[1])
+    resource_data   =pd.DataFrame(telemetry_data[2])
+        
+    flight_data.to_csv('flight_data.csv')
+    orbit_data.to_csv('orbit_data.csv')
+    resource_data.to_csv('resource_data.csv')
     print("simulation finished")
     
     
@@ -77,10 +80,8 @@ def post_simulation_processing():
     pass
 
 
-def check_simulation_termination(resource_data):
-    if(resource_data['SolidFuel']==0):
-        is_running_simulation=False
-    return is_running_simulation
+def terminate_simulation(resource_data):
+    return resource_data['SolidFuel']==0
 
 
 if __name__=="__main__":
