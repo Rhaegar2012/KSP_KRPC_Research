@@ -19,8 +19,8 @@ simulation_controller   = None
 
 
 #Telemetry Data
-telemetry_data_snapshot ={}
-telemetry_data_record   =[]
+telemetry_data_snapshot     ={}
+simulation_telemetry_data   =[]
 
 
 def setup_simulation():
@@ -60,24 +60,33 @@ def run_simulation():
     while is_running_simulation:
         time.sleep(const.SIMULATION_SLEEP)
         telemetry_data=telemetry_manager.stream_telemetry_data()
-        print(telemetry_data)
-        telemetry_data_record.append(telemetry_data)
+        simulation_telemetry_data.append(telemetry_data)
         if terminate_simulation(telemetry_data[2]):
             is_running_simulation=False
+    
+    unpacked_telemetry_dictionary = post_simulation_processing(simulation_telemetry_data)
     time.sleep(1)
-    flight_data     =pd.DataFrame(telemetry_data[0])
-    orbit_data      =pd.DataFrame(telemetry_data[1])
-    resource_data   =pd.DataFrame(telemetry_data[2])
-        
-    flight_data.to_csv('flight_data.csv')
-    orbit_data.to_csv('orbit_data.csv')
-    resource_data.to_csv('resource_data.csv')
+    processed_simulation_data     =pd.DataFrame(unpacked_telemetry_dictionary)
+    simulation_data_export=processed_simulation_data.to_csv('flight_data.csv')
     print("simulation finished")
     
     
  
-def post_simulation_processing():
-    pass
+def post_simulation_processing(raw_telemetry_data):
+    unpacked_list=[]
+    #1. unpack dictionaries from containing list  [[{},{},{}],[{},{},{}]]-> [{},{},{}]
+    for telemetry_snapshot in raw_telemetry_data:
+        for data_dictionary in telemetry_snapshot:
+            unpacked_list.append(data_dictionary)
+
+    #2. Use dictionary comprehension to unpack dictionary collection into dataframe_dictionary
+    #[{},{},{}]-> {}
+    dataframe_dictionary={
+        key:[data_dictionary.get(key) for data_dictionary in unpacked_list]
+        for key in set().union(*unpacked_list)
+    }
+    
+    return dataframe_dictionary
 
 
 def terminate_simulation(resource_data):
@@ -87,5 +96,4 @@ def terminate_simulation(resource_data):
 if __name__=="__main__":
     setup_simulation()
     run_simulation()
-    post_simulation_processing()
     print("simulation finished")
