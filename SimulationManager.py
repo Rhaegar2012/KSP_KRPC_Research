@@ -73,6 +73,7 @@ def run_simulation():
     
  
 def post_simulation_processing(raw_telemetry_data):
+    ### Notes it seems it may be better to have the data split in 3 distinct datasets, let's try that
     unpacked_list=[]
     #1. unpack dictionaries from containing list  [[{},{},{}],[{},{},{}]]-> [{},{},{}]
     for telemetry_snapshot in raw_telemetry_data:
