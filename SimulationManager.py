@@ -64,30 +64,41 @@ def run_simulation():
         if terminate_simulation(telemetry_data[2]):
             is_running_simulation=False
     
-    unpacked_telemetry_dictionary = post_simulation_processing(simulation_telemetry_data)
     time.sleep(1)
-    processed_simulation_data     =pd.DataFrame(unpacked_telemetry_dictionary)
-    simulation_data_export=processed_simulation_data.to_csv('flight_data.csv')
+    
+    dataframe_list = post_simulation_processing(simulation_telemetry_data)
+    processed_flight_data=pd.DataFrame(dataframe_list[0])
+    processed_orbit_data =pd.DataFrame(dataframe_list[1])
+    processed_resource_data= pd.DataFrame(dataframe_list[2])
+    flight_data_export=processed_flight_data.to_csv('flight_data.csv')
+    orbit_data_export =processed_orbit_data.to_csv('orbit_data.csv')
+    resource_data_export=processed_resource_data.to_csv('resource_data.csv')
     print("simulation finished")
     
     
  
 def post_simulation_processing(raw_telemetry_data):
     ### Notes it seems it may be better to have the data split in 3 distinct datasets, let's try that
-    unpacked_list=[]
-    #1. unpack dictionaries from containing list  [[{},{},{}],[{},{},{}]]-> [{},{},{}]
-    for telemetry_snapshot in raw_telemetry_data:
-        for data_dictionary in telemetry_snapshot:
-            unpacked_list.append(data_dictionary)
+    sorted_list=[]
+    result_list=[]
+    loop=0
+    #1. unpack dictionaries from containing list  [[{},{},{}],[{},{},{}]]-> [[{Flight Data}],[{Orbit Data}],[{Resource Data}]]
+    #Assume all the interior lists are of equal length
+    while loop<len(raw_telemetry_data[0]):
+        temp_list=[]
+        for i in range(len(raw_telemetry_data)):
+            temp_list.append(raw_telemetry_data[i][loop])
+        loop+=1
+        sorted_list.append(temp_list)
 
     #2. Use dictionary comprehension to unpack dictionary collection into dataframe_dictionary
-    #[{},{},{}]-> {}
-    dataframe_dictionary={
-        key:[data_dictionary.get(key) for data_dictionary in unpacked_list]
-        for key in set().union(*unpacked_list)
-    }
+    #[{},{},{}]-> {} in the result list for each list we have in the sorted list
+    for i in range(len(sorted_list)):
+        dict_list=sorted_list[i]
+        result_list.append({key:[data_dictionary.get(key) for data_dictionary in dict_list]
+                            for key in set().union(*dict_list)})
     
-    return dataframe_dictionary
+    return result_list
 
 
 def terminate_simulation(resource_data):
