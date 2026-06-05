@@ -5,6 +5,10 @@ from Utils import Constants as const
 from TelemetryManager import TelemetryManager
 from VesselController import VesselController
 from SimulationController import SimulationController
+from KnowledgeModel.KG_Graph import KG_Graph
+from KnowledgeModel.KG_Graph import KG_Node
+from KnowledgeModel.KG_Graph import KG_Edge
+from Utils.Enums import KG_Node_Enum as Enums
 
 
 
@@ -22,6 +26,10 @@ simulation_controller   = None
 telemetry_data_snapshot     ={}
 simulation_telemetry_data   =[]
 
+#Knowledge model 
+simulation_kg               =None
+
+
 
 def setup_simulation():
     #connection to krpc 
@@ -35,6 +43,7 @@ def setup_simulation():
         active_vessel.control.throttle=const.INITIAL_THROTTLE
         active_vessel.control.sas=True
         active_vessel.control.rcs=False
+        simulation_kg=KG_Graph()
     except Exception as e:
         print(f'krpc connection failed: {e}')
         return False
@@ -60,6 +69,7 @@ def run_simulation():
     while is_running_simulation:
         time.sleep(const.SIMULATION_SLEEP)
         telemetry_data=telemetry_manager.stream_telemetry_data()
+        #create time event graph node 
         simulation_telemetry_data.append(telemetry_data)
         if terminate_simulation(telemetry_data[2]):
             is_running_simulation=False
@@ -74,6 +84,22 @@ def run_simulation():
     orbit_data_export =processed_orbit_data.to_csv('orbit_data.csv')
     resource_data_export=processed_resource_data.to_csv('resource_data.csv')
     print("simulation finished")
+    
+def create_event_graph_node(data_stream):
+    #TODO , provide a map for node types and also review how the edge inserts an element, 
+    # perhaps a tag instead of re inserting the reading?
+    new_stream_node=KG_Node(Enums.READING_SNAPSHOT,"Snapshot")
+    simulation_kg.insert_node(new_stream_node)
+    simulation_kg
+    for reading in data_stream:
+        new_reading_node=KG_Node(Enums.MOVEMENT_STATE,reading)
+        simulation_kg.insert_node(new_reading_node)
+        new_edge=KG_Edge(new_stream_node,new_reading_node,reading)
+        simulation_kg.insert_edge(new_stream_node,new_reading_node,new_edge)
+        
+        
+        
+    
     
     
  

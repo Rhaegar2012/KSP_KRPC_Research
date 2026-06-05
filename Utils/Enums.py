@@ -1,7 +1,8 @@
 from enum import Enum
 
 class KG_Node_Enum(Enum):
-    VESSEL=1
-    CELESTIAL_BODY=2
-    VESSEL_STATE=3
+    READING_SNAPSHOT=1
+    MOVEMENT_STATE=2
+    ORBIT_STATE=3
+    VESSEL_STATE=4
     
