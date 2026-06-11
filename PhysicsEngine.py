@@ -7,6 +7,11 @@ class PhysicsComputer():
         pass
     
     
+    #TODO Calculate magnitude of rocket movement (2 body restricted equation)
+    def two_body_restricted_equation(self):
+        pass
+    
+    
     #TODO calculate adjustment to prograde vector?
     def calculate_prograde_adjustemnt(self):
         pass
