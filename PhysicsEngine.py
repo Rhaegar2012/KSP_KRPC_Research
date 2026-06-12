@@ -7,18 +7,37 @@ class PhysicsComputer():
         pass
     
     
-    #TODO Calculate magnitude of rocket movement (2 body restricted equation)
-    def two_body_restricted_equation(self):
+    def calculate_specific_mechanical_energy(self):
+        pass
+    
+    def calculate_semimajor_axis(self):
+        pass
+    
+    def calculate_eccentricity(self):
+        pass
+    
+    def calculate_orbital_inclination(self):
+        pass
+    
+    def calculate_right_ascension_of_ascending_node(self):
+        pass
+    
+    def calculate_argument_of_perigee(self):
+        pass
+    
+    def calculate_true_anomaly(self):
         pass
     
     
-    #TODO calculate adjustment to prograde vector?
-    def calculate_prograde_adjustemnt(self):
-        pass
     
-    #TODO calculate orbital maneuver? 
-    def calculate_orbital_maneuver(self):
-        pass
+    def calculate_COE(self):
+        self.calculate_specific_mechanical_energy()
+        self.calculate_semimajor_axis()
+        self.calculate_eccentricity()
+        self.calculate_orbital_inclination()
+        self.calculate_right_ascension_of_ascending_node()
+        self.calculate_argument_of_perigee()
+        self.calculate_true_anomaly()
     
     
     

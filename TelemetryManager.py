@@ -23,7 +23,8 @@ class TelemetryManager():
         else:
             print("Vessel not found")
             return None
-    
+    #TODO Review position telemetry data we need to review the ships position relative to orbiting body to perform orbital calculations.
+    #TODO Reference frame relative to kerbin is vessel.orbit_body.reference_frame
     def set_up_telemetry_streams(self):
         #1.Create telemetry callback dictionaries for batch call from collections
         #Example: {'mean_altitude':(self.flight_info,'mean_altitude')}
