@@ -1,12 +1,17 @@
 import math
+from Utils import Constants
 
 class PhysicsComputer():
     
     #TODO Identify the functions I need to perform to put a body 
     # in orbit from rest in the ground
     
-    def __init__(self,gravitational_parameter):
-        self.gravitational_parameter=gravitational_parameter
+    def __init__(self,initial_movement_vector,initial_velocity_vector,current_fuel):
+        self.gravitational_parameter            = Constants.KERBIN_GRAVITATIONAL_PARAMETER
+        self.Isp                                = Constants.ISP
+        self.thrust_force                       = Constants.F_THRUST
+        self.fuel_consumption_rate              = Constants.FUEL_CONSUMPTION_RATE
+        self.current_fuel                       = current_fuel
         self.specific_mechanical_energy         =0
         self.semimajor_axis                     =0
         self.eccentricity_vector                =[]
@@ -19,7 +24,17 @@ class PhysicsComputer():
         self.apoapsis                           =0
         self.periapsis                          =0
         self.remaining_fuel                     =0
-        self.rate_of_fuel_consumptuion          =0
+        self.remaining_fuel_time                =0
+        self.orbital_parameters={'Time':[],
+                                 'Specific Mechanical Energy':[],
+                                 'Semimajor Axis':[],
+                                 'Eccentricity Vector':[],
+                                 'Orbital Inclination':[],
+                                 'Right Ascension of Ascending Node':[],
+                                 'Argument of Perigee':[],
+                                 'True Anomaly':[],
+                                 'Apoapsis':[],
+                                 'Periapsis':[]}
         
     
     def calculate_vector_magnitude(self,vector):
@@ -27,7 +42,7 @@ class PhysicsComputer():
         if len(vector) ==0 or vector is None:
             return 0
         else:
-            square_sum += [x^2 for x in vector]
+            square_sum += [x**2 for x in vector]
             return math.sqrt(square_sum)
         
     def calculate_dot_product(self,vector_a,vector_b):
@@ -61,7 +76,7 @@ class PhysicsComputer():
         else:
             magnitude_of_velocity_vector=self.calculate_vector_magnitude(velocity_vector)
             magnitude_of_position_vector=self.calculate_vector_magnitude(position_vector)
-            self.specific_mechanical_energy= (magnitude_of_velocity_vector^2)/2-(self.gravitational_parameter/magnitude_of_position_vector)
+            self.specific_mechanical_energy= (magnitude_of_velocity_vector**2)/2-(self.gravitational_parameter/magnitude_of_position_vector)
         
     
     def calculate_semimajor_axis(self):
@@ -134,17 +149,19 @@ class PhysicsComputer():
         self.calculate_argument_of_perigee()
         self.calculate_true_anomaly()
         self.calculate_current_apoapsis_periapsis()
-    
-    def set_initial_conditions(self,remaining_fuel,rate_of_consumption):
-        self.remaining_fuel=remaining_fuel
-        self.rate_of_fuel_consumptuion=rate_of_consumption 
-    
-    
+        
     #Project telemetry data in future
     #need a way to calculate fuel consumption rate
     #need a way to transmit initial conditions. Should I start the simulation from telemetry or from derivation?
-    def calculate_current_trajectory():
-        pass
+    def simulate_projected_trajectory(self):
+        time_to_fuel_depletion = self.remaining_fuel/self.fuel_consumption_rate
+        simulation_time=0
+        while simulation_time<time_to_fuel_depletion:
+            self.calculate_instant_COE()
+            simulation_time+=Constants.SIMULATION_STEP
+        return self.orbital_parameters
+            
+        
         
     
     
