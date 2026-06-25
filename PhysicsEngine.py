@@ -4,6 +4,7 @@ from Utils import Constants
 class PhysicsComputer():
     
     #TODO Identify the functions I need to perform to put a body 
+    #TODO Do I need to calculate so many orbital parameters? (refactor)
     # in orbit from rest in the ground
     
     def __init__(self,initial_movement_vector,initial_velocity_vector,current_fuel):
@@ -13,7 +14,11 @@ class PhysicsComputer():
         self.fuel_consumption_rate              = Constants.FUEL_CONSUMPTION_RATE
         self.current_fuel                       = current_fuel
         self.specific_mechanical_energy         =0
-        self.semimajor_axis                     =0
+        self.target_semimajor_axis              =0
+        self.target_eccentricity                =0
+        self.target_apoapsis                    =0
+        self.target_periapsis                   =0
+        self.delta_v                            =[]
         self.eccentricity_vector                =[]
         self.right_ascension_of_ascending_node  =[]
         self.argument_of_perigee                =0
@@ -67,7 +72,7 @@ class PhysicsComputer():
                 vector_substraction.append(vector_a[i]-vector_b[i])
             return vector_substraction
     
-    
+    #TODO REFACTOR AND REVIEW IF NECESSARY
     def calculate_specific_mechanical_energy(self,velocity_vector,position_vector):
         
         if velocity_vector is None or position_vector is None: 
@@ -78,14 +83,14 @@ class PhysicsComputer():
             magnitude_of_position_vector=self.calculate_vector_magnitude(position_vector)
             self.specific_mechanical_energy= (magnitude_of_velocity_vector**2)/2-(self.gravitational_parameter/magnitude_of_position_vector)
         
-    
+    #TODO REFACTOR WITH DESIRED APOAPSIS AND PERIAPSIS
     def calculate_semimajor_axis(self):
         if(self.specific_mechanical_energy!=0):
-            self.semimajor_axis=-(self.gravitational_parameter/(2*self.specific_mechanical_energy))
+            self.target_semimajor_axis=-(self.gravitational_parameter/(2*self.specific_mechanical_energy))
         else:
             return 0
             
-    
+    #TODO REFACTOR WITH DESIRED APOAPSIS AND PERIAPSIS
     def calculate_eccentricity_vector(self,velocity_vector,position_vector):
         if velocity_vector is None or position_vector is None:
             print("empty velocity or position vector")
@@ -95,7 +100,7 @@ class PhysicsComputer():
             second_term =(self.calculate_dot_product(position_vector,velocity_vector))*velocity_vector
             self.eccentricity=(1/self.gravitational_parameter)*(self.calculate_vector_substraction(first_term,second_term))
         
-    
+    #TODO REFACTOR AND REVIEW IF NECESSARY
     def calculate_orbital_inclination(self,specific_angular_momentum_vector):
         if len(specific_angular_momentum_vector)<3 or specific_angular_momentum_vector is None: 
             print("invalid angular momentum vector")
@@ -105,7 +110,7 @@ class PhysicsComputer():
             denominator= self.calculate_vector_magnitude(self.unit_vector_k)*self.calculate_vector_magnitude(specific_angular_momentum_vector)
             self.inclination=math.acos(numerator/denominator) 
         
-    
+    #TODO REFACTOR AND REVIEW IF NECESSARY
     def calculate_right_ascension_of_ascending_node(self,ascending_node_vector):
         if len(ascending_node_vector)<3 or ascending_node_vector is None: 
             print("invalid ascending node")
@@ -115,7 +120,7 @@ class PhysicsComputer():
             denominator= self.calculate_vector_magnitude(self.unit_vector_i)*self.calculate_vector_magnitude(ascending_node_vector)
             self.right_ascension_of_ascending_node=math.acos(numerator/denominator)
 
-    
+    #TODO REFACTOR AND REVIEW IF NECESSARY
     def calculate_argument_of_perigee(self,ascending_node_vector):
         if len(ascending_node_vector)<3 or ascending_node_vector is None:
             print("invalid ascending node vector")
@@ -125,7 +130,7 @@ class PhysicsComputer():
             denominator=(self.calculate_vector_magnitude(ascending_node_vector))*(self.calculate_vector_magnitude(self.eccentricity_vector))
             self.argument_of_perigee=math.acos(numerator/denominator)
     
-    
+    #TODO REFACTOR AND REVIEW IF NECESSARY
     def calculate_true_anomaly(self,position_vector):
         if len(position_vector)<3 or position_vector is None:
             print("invalid position vector")
@@ -134,11 +139,11 @@ class PhysicsComputer():
             numerator=self.calculate_dot_product(self.eccentricity_vector,position_vector)
             denominator =self.calculate_vector_magnitude(self.eccentricity_vector)*self.calculate_vector_magnitude(position_vector)
             self.true_anomaly=math.acos(numerator/denominator)
-    
+    #TODO REFACTOR AND REVIEW IF NECESSARY
     def calculate_current_apoapsis_periapsis(self):
-        self.periapsis=self.semimajor_axis*(1-self.calculate_vector_magnitude(self.eccentricity_vector))
-        self.apoapsis =self.semimajor_axis*(1+self.calculate_vector_magnitude(self.eccentricity_vector))
-    
+        self.periapsis=self.target_semimajor_axis*(1-self.calculate_vector_magnitude(self.eccentricity_vector))
+        self.apoapsis =self.target_semimajor_axis*(1+self.calculate_vector_magnitude(self.eccentricity_vector))
+    #TODO REFACTOR AND REVIEW IF NECESSARY
     #This function will calculate the orbital parameters for every tick of the physics simulation
     def calculate_instant_COE(self):
         self.calculate_specific_mechanical_energy()
@@ -149,7 +154,8 @@ class PhysicsComputer():
         self.calculate_argument_of_perigee()
         self.calculate_true_anomaly()
         self.calculate_current_apoapsis_periapsis()
-        
+    
+    #TODO REFACTOR TO CALCULATE NECESSARY DELTA_V
     #Project telemetry data in future
     #need a way to calculate fuel consumption rate
     #need a way to transmit initial conditions. Should I start the simulation from telemetry or from derivation?
