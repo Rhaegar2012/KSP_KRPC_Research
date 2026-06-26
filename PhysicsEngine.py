@@ -1,4 +1,5 @@
 import math
+import numpy as np
 from Utils import Constants
 
 class PhysicsComputer():
@@ -7,47 +8,36 @@ class PhysicsComputer():
     #TODO Do I need to calculate so many orbital parameters? (refactor)
     # in orbit from rest in the ground
     
-    def __init__(self,initial_movement_vector,initial_velocity_vector,current_fuel):
+    def __init__(self,current_movement_vector,current_velocity_vector,current_fuel):
         self.gravitational_parameter            = Constants.KERBIN_GRAVITATIONAL_PARAMETER
         self.Isp                                = Constants.ISP
         self.thrust_force                       = Constants.F_THRUST
         self.fuel_consumption_rate              = Constants.FUEL_CONSUMPTION_RATE
+        self.target_apoapsis                    =Constants.TARGET_APOAPSIS
+        self.target_periapsis                   =Constants.TARGET_PERIAPSIS
         self.current_fuel                       = current_fuel
-        self.specific_mechanical_energy         =0
+        self.current_position_vector            = current_movement_vector
+        self.current_velocity_vector            = current_velocity_vector
         self.target_semimajor_axis              =0
+        self.semi_latus_rectum                  =0
+        self.orbital_angular_momentum           =0
+        self.vis_viva_velocity                  =0
         self.target_eccentricity                =0
-        self.target_apoapsis                    =0
-        self.target_periapsis                   =0
-        self.delta_v                            =[]
-        self.eccentricity_vector                =[]
+        self.delta_v                            =0
         self.right_ascension_of_ascending_node  =[]
-        self.argument_of_perigee                =0
         self.true_anomaly                       =0
-        self.unit_vector_k                      =[0,0,1] #Unit vector through the north pole
-        self.unit_vector_i                      =[1,0,0] #Unit vector through principal direction
-        self.inclination                        =0
-        self.apoapsis                           =0
-        self.periapsis                          =0
-        self.remaining_fuel                     =0
-        self.remaining_fuel_time                =0
-        self.orbital_parameters={'Time':[],
-                                 'Specific Mechanical Energy':[],
-                                 'Semimajor Axis':[],
-                                 'Eccentricity Vector':[],
-                                 'Orbital Inclination':[],
-                                 'Right Ascension of Ascending Node':[],
-                                 'Argument of Perigee':[],
-                                 'True Anomaly':[],
-                                 'Apoapsis':[],
-                                 'Periapsis':[]}
+        
+    
+        
         
     
     def calculate_vector_magnitude(self,vector):
         square_sum=0
-        if len(vector) ==0 or vector is None:
+        if vector is None or len(vector) ==0:
             return 0
         else:
-            square_sum += [x**2 for x in vector]
+            for x in vector:
+                square_sum+=x**2
             return math.sqrt(square_sum)
         
     def calculate_dot_product(self,vector_a,vector_b):
@@ -57,7 +47,7 @@ class PhysicsComputer():
             return 0
         else:
             i=0
-            for i in range(len(vector_a)-1):
+            for i in range(len(vector_a)):
                 dot_product+=vector_a[i]*vector_b[i]
             return dot_product
                 
@@ -72,64 +62,48 @@ class PhysicsComputer():
                 vector_substraction.append(vector_a[i]-vector_b[i])
             return vector_substraction
     
-    #TODO REFACTOR AND REVIEW IF NECESSARY
-    def calculate_specific_mechanical_energy(self,velocity_vector,position_vector):
-        
-        if velocity_vector is None or position_vector is None: 
-            print ("empty velocity or position vector")
-            return 0
-        else:
-            magnitude_of_velocity_vector=self.calculate_vector_magnitude(velocity_vector)
-            magnitude_of_position_vector=self.calculate_vector_magnitude(position_vector)
-            self.specific_mechanical_energy= (magnitude_of_velocity_vector**2)/2-(self.gravitational_parameter/magnitude_of_position_vector)
-        
-    #TODO REFACTOR WITH DESIRED APOAPSIS AND PERIAPSIS
-    def calculate_semimajor_axis(self):
-        if(self.specific_mechanical_energy!=0):
-            self.target_semimajor_axis=-(self.gravitational_parameter/(2*self.specific_mechanical_energy))
-        else:
-            return 0
-            
-    #TODO REFACTOR WITH DESIRED APOAPSIS AND PERIAPSIS
-    def calculate_eccentricity_vector(self,velocity_vector,position_vector):
-        if velocity_vector is None or position_vector is None:
-            print("empty velocity or position vector")
-            return 0
-        else:
-            first_term  =(self.calculate_vector_magnitude(velocity_vector)-(self.gravitational_parameter/self.calculate_vector_magnitude(position_vector)))*position_vector
-            second_term =(self.calculate_dot_product(position_vector,velocity_vector))*velocity_vector
-            self.eccentricity=(1/self.gravitational_parameter)*(self.calculate_vector_substraction(first_term,second_term))
-        
-    #TODO REFACTOR AND REVIEW IF NECESSARY
-    def calculate_orbital_inclination(self,specific_angular_momentum_vector):
-        if len(specific_angular_momentum_vector)<3 or specific_angular_momentum_vector is None: 
-            print("invalid angular momentum vector")
-            return 0
-        else:
-            numerator=self.calculate_dot_product(self.unit_vector_k,specific_angular_momentum_vector)
-            denominator= self.calculate_vector_magnitude(self.unit_vector_k)*self.calculate_vector_magnitude(specific_angular_momentum_vector)
-            self.inclination=math.acos(numerator/denominator) 
-        
-    #TODO REFACTOR AND REVIEW IF NECESSARY
-    def calculate_right_ascension_of_ascending_node(self,ascending_node_vector):
-        if len(ascending_node_vector)<3 or ascending_node_vector is None: 
-            print("invalid ascending node")
-            return 0
-        else:
-            numerator= self.calculate_dot_product(self.unit_vector_i,ascending_node_vector)
-            denominator= self.calculate_vector_magnitude(self.unit_vector_i)*self.calculate_vector_magnitude(ascending_node_vector)
-            self.right_ascension_of_ascending_node=math.acos(numerator/denominator)
-
-    #TODO REFACTOR AND REVIEW IF NECESSARY
-    def calculate_argument_of_perigee(self,ascending_node_vector):
-        if len(ascending_node_vector)<3 or ascending_node_vector is None:
-            print("invalid ascending node vector")
-            return 0
-        else:
-            numerator=self.calculate_dot_product(ascending_node_vector,self.eccentricity_vector)
-            denominator=(self.calculate_vector_magnitude(ascending_node_vector))*(self.calculate_vector_magnitude(self.eccentricity_vector))
-            self.argument_of_perigee=math.acos(numerator/denominator)
     
+
+    def calculate_semimajor_axis(self):
+        if self.target_apoapsis !=0 and self.target_periapsis !=0:
+            self.target_semimajor_axis=(self.target_periapsis+self.target_apoapsis)/2
+        else:
+            print("invalid target apoapsis or periapsis")
+            
+    def calculate_target_eccentricity(self):
+        if self.target_apoapsis !=0 and self.target_periapsis !=0:
+            self.target_eccentricity=(self.target_apoapsis-self.target_periapsis)/(self.target_apoapsis+self.target_periapsis)
+        else:
+            print("Invalid target apoapsis or periapsis")
+        
+    def required_delta_v(self):
+        self.semi_latus_rectum=self.target_semimajor_axis*(1-self.target_eccentricity**2)
+        self.orbital_angular_momentum=math.sqrt(self.gravitational_parameter*self.semi_latus_rectum)
+        position_vector_magnitude=self.calculate_vector_magnitude(self.current_position_vector)
+        velocity_vector_magnitude=self.calculate_vector_magnitude(self.current_velocity_vector)
+        
+        #Velocity magnitude required to achieve apoapsis through Vis Viva Equation
+        self.vis_viva_velocity=math.sqrt(self.gravitational_parameter*((2/position_vector_magnitude)-(1/self.target_semimajor_axis)))
+        
+        #Burn Adjustment angle
+        burn_adjustment_angle=math.acos(self.orbital_angular_momentum/(position_vector_magnitude*self.vis_viva_velocity))
+        
+        #Required velocity vector
+        unit_r_hat_vector= [x/position_vector_magnitude for x in self.current_position_vector]
+        
+        angular_momentum_vector = np.cross(self.current_position_vector,self.current_velocity_vector)
+        angular_momentum_magnitude = self.calculate_vector_magnitude(angular_momentum_vector)
+        
+        unit_t_hat_vector=[x/angular_momentum_magnitude for x in angular_momentum_vector]
+        
+        r_hat_vector = [self.vis_viva_velocity*math.sin(burn_adjustment_angle)*x for x in unit_r_hat_vector]
+        t_hat_vector = [self.vis_viva_velocity*math.cos(burn_adjustment_angle)*x for x in unit_t_hat_vector]
+        
+        #Calculate delta v and delta v vector
+        required_velocity_vector=[x+y for x,y in zip(r_hat_vector,t_hat_vector)]
+        delta_v_vector=[x-y for x,y in zip(required_velocity_vector,self.current_velocity_vector)]
+        self.delta_v = self.calculate_vector_magnitude(delta_v_vector)
+        
     #TODO REFACTOR AND REVIEW IF NECESSARY
     def calculate_true_anomaly(self,position_vector):
         if len(position_vector)<3 or position_vector is None:
@@ -139,21 +113,8 @@ class PhysicsComputer():
             numerator=self.calculate_dot_product(self.eccentricity_vector,position_vector)
             denominator =self.calculate_vector_magnitude(self.eccentricity_vector)*self.calculate_vector_magnitude(position_vector)
             self.true_anomaly=math.acos(numerator/denominator)
-    #TODO REFACTOR AND REVIEW IF NECESSARY
-    def calculate_current_apoapsis_periapsis(self):
-        self.periapsis=self.target_semimajor_axis*(1-self.calculate_vector_magnitude(self.eccentricity_vector))
-        self.apoapsis =self.target_semimajor_axis*(1+self.calculate_vector_magnitude(self.eccentricity_vector))
-    #TODO REFACTOR AND REVIEW IF NECESSARY
-    #This function will calculate the orbital parameters for every tick of the physics simulation
-    def calculate_instant_COE(self):
-        self.calculate_specific_mechanical_energy()
-        self.calculate_semimajor_axis()
-        self.calculate_eccentricity_vector()
-        self.calculate_orbital_inclination()
-        self.calculate_right_ascension_of_ascending_node()
-        self.calculate_argument_of_perigee()
-        self.calculate_true_anomaly()
-        self.calculate_current_apoapsis_periapsis()
+    
+    
     
     #TODO REFACTOR TO CALCULATE NECESSARY DELTA_V
     #Project telemetry data in future
