@@ -8,23 +8,23 @@ class PhysicsComputer():
     #TODO Do I need to calculate so many orbital parameters? (refactor)
     # in orbit from rest in the ground
     
-    def __init__(self,current_movement_vector,current_velocity_vector,current_fuel):
+    def __init__(self,current_position_vector,current_velocity_vector,current_fuel):
         self.gravitational_parameter            = Constants.KERBIN_GRAVITATIONAL_PARAMETER
         self.Isp                                = Constants.ISP
         self.thrust_force                       = Constants.F_THRUST
         self.fuel_consumption_rate              = Constants.FUEL_CONSUMPTION_RATE
-        self.target_apoapsis                    =Constants.TARGET_APOAPSIS
-        self.target_periapsis                   =Constants.TARGET_PERIAPSIS
+        self.target_apoapsis                    = Constants.TARGET_APOAPSIS
+        self.target_periapsis                   = Constants.TARGET_PERIAPSIS
         self.current_fuel                       = current_fuel
-        self.current_position_vector            = current_movement_vector
-        self.current_velocity_vector            = current_velocity_vector
+        self.current_position_vector            = current_position_vector #Cartesian coordinates body centered and non-rotating with origin at center of mass
+        self.current_velocity_vector            = current_velocity_vector #Relative to orbiting body
         self.target_semimajor_axis              =0
         self.semi_latus_rectum                  =0
         self.orbital_angular_momentum           =0
         self.vis_viva_velocity                  =0
         self.target_eccentricity                =0
         self.delta_v                            =0
-        self.right_ascension_of_ascending_node  =[]
+        self.current_eccentricity_vector        =0  
         self.true_anomaly                       =0
         
     
@@ -64,7 +64,7 @@ class PhysicsComputer():
     
     
 
-    def calculate_semimajor_axis(self):
+    def calculate_target_semimajor_axis(self):
         if self.target_apoapsis !=0 and self.target_periapsis !=0:
             self.target_semimajor_axis=(self.target_periapsis+self.target_apoapsis)/2
         else:
@@ -75,12 +75,12 @@ class PhysicsComputer():
             self.target_eccentricity=(self.target_apoapsis-self.target_periapsis)/(self.target_apoapsis+self.target_periapsis)
         else:
             print("Invalid target apoapsis or periapsis")
-        
+     
+    #pass position_vector from sweep on true anomaly , not self.current_position_vector read from telemetry   
     def required_delta_v(self):
         self.semi_latus_rectum=self.target_semimajor_axis*(1-self.target_eccentricity**2)
         self.orbital_angular_momentum=math.sqrt(self.gravitational_parameter*self.semi_latus_rectum)
         position_vector_magnitude=self.calculate_vector_magnitude(self.current_position_vector)
-        velocity_vector_magnitude=self.calculate_vector_magnitude(self.current_velocity_vector)
         
         #Velocity magnitude required to achieve apoapsis through Vis Viva Equation
         self.vis_viva_velocity=math.sqrt(self.gravitational_parameter*((2/position_vector_magnitude)-(1/self.target_semimajor_axis)))
@@ -90,11 +90,10 @@ class PhysicsComputer():
         
         #Required velocity vector
         unit_r_hat_vector= [x/position_vector_magnitude for x in self.current_position_vector]
-        
         angular_momentum_vector = np.cross(self.current_position_vector,self.current_velocity_vector)
-        angular_momentum_magnitude = self.calculate_vector_magnitude(angular_momentum_vector)
-        
-        unit_t_hat_vector=[x/angular_momentum_magnitude for x in angular_momentum_vector]
+        t_hat_unnormalized=np.cross(angular_momentum_vector,self.current_position_vector)
+        t_hat_magnitude=self.calculate_vector_magnitude(t_hat_unnormalized)
+        unit_t_hat_vector=[x/t_hat_magnitude for x in t_hat_unnormalized]
         
         r_hat_vector = [self.vis_viva_velocity*math.sin(burn_adjustment_angle)*x for x in unit_r_hat_vector]
         t_hat_vector = [self.vis_viva_velocity*math.cos(burn_adjustment_angle)*x for x in unit_t_hat_vector]
@@ -104,29 +103,21 @@ class PhysicsComputer():
         delta_v_vector=[x-y for x,y in zip(required_velocity_vector,self.current_velocity_vector)]
         self.delta_v = self.calculate_vector_magnitude(delta_v_vector)
         
-    #TODO REFACTOR AND REVIEW IF NECESSARY
-    def calculate_true_anomaly(self,position_vector):
-        if len(position_vector)<3 or position_vector is None:
-            print("invalid position vector")
-            return 0
-        else:
-            numerator=self.calculate_dot_product(self.eccentricity_vector,position_vector)
-            denominator =self.calculate_vector_magnitude(self.eccentricity_vector)*self.calculate_vector_magnitude(position_vector)
-            self.true_anomaly=math.acos(numerator/denominator)
-    
-    
-    
-    #TODO REFACTOR TO CALCULATE NECESSARY DELTA_V
-    #Project telemetry data in future
-    #need a way to calculate fuel consumption rate
-    #need a way to transmit initial conditions. Should I start the simulation from telemetry or from derivation?
-    def simulate_projected_trajectory(self):
-        time_to_fuel_depletion = self.remaining_fuel/self.fuel_consumption_rate
-        simulation_time=0
-        while simulation_time<time_to_fuel_depletion:
-            self.calculate_instant_COE()
-            simulation_time+=Constants.SIMULATION_STEP
-        return self.orbital_parameters
+    #Find cheapest correction burn 
+    def find_correction_burn(self):
+        '''
+        1. Calculate current semi-latus rectum p_0=a_0(1-e_0**2) read from telemetry on every tick
+        2. Loop true anomaly (v) from 0 (periapsis) to 180 (apoapsis)
+           2.1 Calculate R(v) from true anomaly sweep from 0 (periapsis) to 180 (apoapsis)
+           2.2 Calculate current vis_viva velocity with R(v)
+           2.3 Calculate current flight path angle with current true anomaly as gamma (v)=e_0*sin(v)/(1+e_0*cos(v))
+           2.4 Calculate new  vis_viva velocity for target apoapsis
+           2.5 Calculate new flight path angle with current true anomaly but angular momentum for target apoapsis semi-latus rectm
+           2.6 Calculate required delta_v using the position vector R(v) and the target angular momentum
+           2.7 if cost<minimum cost save minimum cost
+        3. Return R(v) and V (correction to prograde) 
+        '''
+        pass
             
         
         

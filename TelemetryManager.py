@@ -6,7 +6,7 @@ class TelemetryManager():
     def __init__(self,active_vessel,krpc_connection):
         self.vessel=active_vessel
         self.conn=krpc_connection
-        
+        #TODO Position/Velocity vectors need to be read from body.non_rotating_reference_frame 
         if self.vessel and self.conn:
             self.reference_frame=self.vessel.reference_frame
             self.flight_info=self.vessel.flight()
