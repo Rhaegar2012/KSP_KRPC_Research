@@ -1,3 +1,4 @@
+import sys
 import math
 import numpy as np
 from Utils import Constants
@@ -8,15 +9,20 @@ class PhysicsComputer():
     #TODO Do I need to calculate so many orbital parameters? (refactor)
     # in orbit from rest in the ground
     
-    def __init__(self,current_position_vector,current_velocity_vector,current_fuel):
+    def __init__(self,telemetry_position_vector,
+                 current_velocity_vector,
+                 telemetry_fuel,
+                 telemetry_apoapsis,
+                 telemetry_eccentricity):
         self.gravitational_parameter            = Constants.KERBIN_GRAVITATIONAL_PARAMETER
         self.Isp                                = Constants.ISP
         self.thrust_force                       = Constants.F_THRUST
         self.fuel_consumption_rate              = Constants.FUEL_CONSUMPTION_RATE
         self.target_apoapsis                    = Constants.TARGET_APOAPSIS
         self.target_periapsis                   = Constants.TARGET_PERIAPSIS
-        self.current_fuel                       = current_fuel
-        self.current_position_vector            = current_position_vector #Cartesian coordinates body centered and non-rotating with origin at center of mass
+        self.telemetry_apoapsis                 = telemetry_apoapsis
+        self.telemetry_fuel                     = telemetry_fuel
+        self.telemetry_position_vector          = telemetry_position_vector #Cartesian coordinates body centered and non-rotating with origin at center of mass
         self.current_velocity_vector            = current_velocity_vector #Relative to orbiting body
         self.target_semimajor_axis              =0
         self.semi_latus_rectum                  =0
@@ -24,7 +30,7 @@ class PhysicsComputer():
         self.vis_viva_velocity                  =0
         self.target_eccentricity                =0
         self.delta_v                            =0
-        self.current_eccentricity_vector        =0  
+        self.telemetry_eccentricity             =telemetry_eccentricity
         self.true_anomaly                       =0
         
     
@@ -77,10 +83,10 @@ class PhysicsComputer():
             print("Invalid target apoapsis or periapsis")
      
     #pass position_vector from sweep on true anomaly , not self.current_position_vector read from telemetry   
-    def required_delta_v(self):
+    def calculate_vis_viva(self,position_magnitude,apoapsis):
         self.semi_latus_rectum=self.target_semimajor_axis*(1-self.target_eccentricity**2)
         self.orbital_angular_momentum=math.sqrt(self.gravitational_parameter*self.semi_latus_rectum)
-        position_vector_magnitude=self.calculate_vector_magnitude(self.current_position_vector)
+        position_vector_magnitude=self.calculate_vector_magnitude(self.telemetry_position_vector)
         
         #Velocity magnitude required to achieve apoapsis through Vis Viva Equation
         self.vis_viva_velocity=math.sqrt(self.gravitational_parameter*((2/position_vector_magnitude)-(1/self.target_semimajor_axis)))
@@ -89,9 +95,9 @@ class PhysicsComputer():
         burn_adjustment_angle=math.acos(self.orbital_angular_momentum/(position_vector_magnitude*self.vis_viva_velocity))
         
         #Required velocity vector
-        unit_r_hat_vector= [x/position_vector_magnitude for x in self.current_position_vector]
-        angular_momentum_vector = np.cross(self.current_position_vector,self.current_velocity_vector)
-        t_hat_unnormalized=np.cross(angular_momentum_vector,self.current_position_vector)
+        unit_r_hat_vector= [x/position_vector_magnitude for x in self.telemetry_position_vector]
+        angular_momentum_vector = np.cross(self.telemetry_position_vector,self.current_velocity_vector)
+        t_hat_unnormalized=np.cross(angular_momentum_vector,self.telemetry_position_vector)
         t_hat_magnitude=self.calculate_vector_magnitude(t_hat_unnormalized)
         unit_t_hat_vector=[x/t_hat_magnitude for x in t_hat_unnormalized]
         
@@ -117,6 +123,20 @@ class PhysicsComputer():
            2.7 if cost<minimum cost save minimum cost
         3. Return R(v) and V (correction to prograde) 
         '''
+        telemetry_semi_latus_rectum=self.telemetry_apoapsis*(1-self.telemetry_eccentricity)
+        target_semi_latus_rectum=0#TODO
+        true_anomaly=0
+        min_delta_v= sys.float_info.max
+        while true_anomaly<Constants.SIMULATION_TRUE_ANOMALY_AT_APOAPSIS:
+            position_at_anomaly=telemetry_semi_latus_rectum/(1+self.telemetry_eccentricity*math.cos(true_anomaly))
+            vis_viva_velocity_at_anomaly=self.calculate_vis_via(position_at_anomaly,self.telemetry_apoapsis)
+            flight_path_angle_at_anomaly=math.tan(self.telemetry_eccentricity*math.sin(true_anomaly)/(1+self.telemetry_eccentricity*math.cos(true_anomaly)))
+            target_vis_viva=self.calculate_vis_viva(position_at_anomaly,self.target_apoapsis)
+            flight_path_angle_at_target=0#TODO
+            
+        
+        
+        
         pass
             
         
