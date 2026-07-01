@@ -83,31 +83,12 @@ class PhysicsComputer():
             print("Invalid target apoapsis or periapsis")
      
     #pass position_vector from sweep on true anomaly , not self.current_position_vector read from telemetry   
-    def calculate_vis_viva(self,position_magnitude,apoapsis):
-        self.semi_latus_rectum=self.target_semimajor_axis*(1-self.target_eccentricity**2)
-        self.orbital_angular_momentum=math.sqrt(self.gravitational_parameter*self.semi_latus_rectum)
-        position_vector_magnitude=self.calculate_vector_magnitude(self.telemetry_position_vector)
+    def calculate_vis_viva(self,position_magnitude,semimajor_axis):
         
         #Velocity magnitude required to achieve apoapsis through Vis Viva Equation
-        self.vis_viva_velocity=math.sqrt(self.gravitational_parameter*((2/position_vector_magnitude)-(1/self.target_semimajor_axis)))
+        vis_viva_velocity=math.sqrt(self.gravitational_parameter*((2/position_magnitude)-(1/semimajor_axis)))
         
-        #Burn Adjustment angle
-        burn_adjustment_angle=math.acos(self.orbital_angular_momentum/(position_vector_magnitude*self.vis_viva_velocity))
-        
-        #Required velocity vector
-        unit_r_hat_vector= [x/position_vector_magnitude for x in self.telemetry_position_vector]
-        angular_momentum_vector = np.cross(self.telemetry_position_vector,self.current_velocity_vector)
-        t_hat_unnormalized=np.cross(angular_momentum_vector,self.telemetry_position_vector)
-        t_hat_magnitude=self.calculate_vector_magnitude(t_hat_unnormalized)
-        unit_t_hat_vector=[x/t_hat_magnitude for x in t_hat_unnormalized]
-        
-        r_hat_vector = [self.vis_viva_velocity*math.sin(burn_adjustment_angle)*x for x in unit_r_hat_vector]
-        t_hat_vector = [self.vis_viva_velocity*math.cos(burn_adjustment_angle)*x for x in unit_t_hat_vector]
-        
-        #Calculate delta v and delta v vector
-        required_velocity_vector=[x+y for x,y in zip(r_hat_vector,t_hat_vector)]
-        delta_v_vector=[x-y for x,y in zip(required_velocity_vector,self.current_velocity_vector)]
-        self.delta_v = self.calculate_vector_magnitude(delta_v_vector)
+        return vis_viva_velocity
         
     #Find cheapest correction burn 
     def find_correction_burn(self):
@@ -123,21 +104,31 @@ class PhysicsComputer():
            2.7 if cost<minimum cost save minimum cost
         3. Return R(v) and V (correction to prograde) 
         '''
-        telemetry_semi_latus_rectum=self.telemetry_apoapsis*(1-self.telemetry_eccentricity)
-        target_semi_latus_rectum=0#TODO
+        telemetry_semi_latus_rectum =self.telemetry_apoapsis*(1-self.telemetry_eccentricity**2)
+        target_semi_latus_rectum    =self.target_apoapsis*(1-self.target_eccentricity**2)
         true_anomaly=0
         min_delta_v= sys.float_info.max
         while true_anomaly<Constants.SIMULATION_TRUE_ANOMALY_AT_APOAPSIS:
-            position_at_anomaly=telemetry_semi_latus_rectum/(1+self.telemetry_eccentricity*math.cos(true_anomaly))
-            vis_viva_velocity_at_anomaly=self.calculate_vis_via(position_at_anomaly,self.telemetry_apoapsis)
-            flight_path_angle_at_anomaly=math.tan(self.telemetry_eccentricity*math.sin(true_anomaly)/(1+self.telemetry_eccentricity*math.cos(true_anomaly)))
-            target_vis_viva=self.calculate_vis_viva(position_at_anomaly,self.target_apoapsis)
-            flight_path_angle_at_target=0#TODO
             
+            position_at_anomaly=telemetry_semi_latus_rectum/(1+self.telemetry_eccentricity*math.cos(true_anomaly))#Change apoapsis for semimajor axis
+            vis_viva_at_anomaly=self.calculate_vis_viva(position_at_anomaly,self.telemetry_apoapsis)#Change apoapsis for semimajor axis
+            flight_path_angle_at_anomaly=math.atan(self.telemetry_eccentricity*math.sin(true_anomaly)/(1+self.telemetry_eccentricity*math.cos(true_anomaly)))
+            target_vis_viva=self.calculate_vis_viva(position_at_anomaly,self.target_apoapsis)
+            flight_path_angle_at_target=math.acos((math.sqrt(self.gravitational_parameter*target_semi_latus_rectum)/(position_at_anomaly*target_vis_viva)))
+            
+            required_delta_v=math.sqrt(target_vis_viva**2+vis_viva_at_anomaly**2-2*target_vis_viva*vis_viva_at_anomaly*math.cos(flight_path_angle_at_target-flight_path_angle_at_anomaly))
+            
+            if required_delta_v<min_delta_v:
+                min_delta_v=required_delta_v
+            
+            true_anomaly+=Constants.SIMULATION_TRUE_ANOMALY_STEP
+        
+        if min_delta_v is not None:
+            return min_delta_v
+        else:
+            return 0
         
         
-        
-        pass
             
         
         
