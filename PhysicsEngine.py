@@ -13,7 +13,8 @@ class PhysicsComputer():
                  current_velocity_vector,
                  telemetry_fuel,
                  telemetry_apoapsis,
-                 telemetry_eccentricity):
+                 telemetry_eccentricity,
+                 telemetry_semi_major_axis):
         self.gravitational_parameter            = Constants.KERBIN_GRAVITATIONAL_PARAMETER
         self.Isp                                = Constants.ISP
         self.thrust_force                       = Constants.F_THRUST
@@ -22,15 +23,16 @@ class PhysicsComputer():
         self.target_periapsis                   = Constants.TARGET_PERIAPSIS
         self.telemetry_apoapsis                 = telemetry_apoapsis
         self.telemetry_fuel                     = telemetry_fuel
+        self.telemetry_eccentricity             =telemetry_eccentricity
         self.telemetry_position_vector          = telemetry_position_vector #Cartesian coordinates body centered and non-rotating with origin at center of mass
         self.current_velocity_vector            = current_velocity_vector #Relative to orbiting body
-        self.target_semimajor_axis              =0
+        self.telemetry_semi_major_axis          = telemetry_semi_major_axis
+        self.target_semimajor_axis              =(self.target_apoapsis+self.target_periapsis)/2
+        self.target_eccentricity                =(self.target_apoapsis-self.target_periapsis)/(self.target_apoapsis+self.target_periapsis)
         self.semi_latus_rectum                  =0
         self.orbital_angular_momentum           =0
         self.vis_viva_velocity                  =0
-        self.target_eccentricity                =0
         self.delta_v                            =0
-        self.telemetry_eccentricity             =telemetry_eccentricity
         self.true_anomaly                       =0
         
     
@@ -68,19 +70,6 @@ class PhysicsComputer():
                 vector_substraction.append(vector_a[i]-vector_b[i])
             return vector_substraction
     
-    
-
-    def calculate_target_semimajor_axis(self):
-        if self.target_apoapsis !=0 and self.target_periapsis !=0:
-            self.target_semimajor_axis=(self.target_periapsis+self.target_apoapsis)/2
-        else:
-            print("invalid target apoapsis or periapsis")
-            
-    def calculate_target_eccentricity(self):
-        if self.target_apoapsis !=0 and self.target_periapsis !=0:
-            self.target_eccentricity=(self.target_apoapsis-self.target_periapsis)/(self.target_apoapsis+self.target_periapsis)
-        else:
-            print("Invalid target apoapsis or periapsis")
      
     #pass position_vector from sweep on true anomaly , not self.current_position_vector read from telemetry   
     def calculate_vis_viva(self,position_magnitude,semimajor_axis):
@@ -104,27 +93,37 @@ class PhysicsComputer():
            2.7 if cost<minimum cost save minimum cost
         3. Return R(v) and V (correction to prograde) 
         '''
-        telemetry_semi_latus_rectum =self.telemetry_apoapsis*(1-self.telemetry_eccentricity**2)
-        target_semi_latus_rectum    =self.target_apoapsis*(1-self.target_eccentricity**2)
+        telemetry_semi_latus_rectum =self.telemetry_semi_major_axis*(1-self.telemetry_eccentricity**2)
+        target_semi_latus_rectum    =self.target_semimajor_axis*(1-self.target_eccentricity**2)
         true_anomaly=0
         min_delta_v= sys.float_info.max
+        min_true_anomaly=[]
+        min_position=[]
         while true_anomaly<Constants.SIMULATION_TRUE_ANOMALY_AT_APOAPSIS:
             
             position_at_anomaly=telemetry_semi_latus_rectum/(1+self.telemetry_eccentricity*math.cos(true_anomaly))#Change apoapsis for semimajor axis
-            vis_viva_at_anomaly=self.calculate_vis_viva(position_at_anomaly,self.telemetry_apoapsis)#Change apoapsis for semimajor axis
-            flight_path_angle_at_anomaly=math.atan(self.telemetry_eccentricity*math.sin(true_anomaly)/(1+self.telemetry_eccentricity*math.cos(true_anomaly)))
-            target_vis_viva=self.calculate_vis_viva(position_at_anomaly,self.target_apoapsis)
-            flight_path_angle_at_target=math.acos((math.sqrt(self.gravitational_parameter*target_semi_latus_rectum)/(position_at_anomaly*target_vis_viva)))
             
-            required_delta_v=math.sqrt(target_vis_viva**2+vis_viva_at_anomaly**2-2*target_vis_viva*vis_viva_at_anomaly*math.cos(flight_path_angle_at_target-flight_path_angle_at_anomaly))
+            if self.target_periapsis<=position_at_anomaly<=self.target_apoapsis:
+                #Current velocity (prograde) at anomaly
+                vis_viva_at_anomaly=self.calculate_vis_viva(position_at_anomaly,self.telemetry_semi_major_axis)
+                flight_path_angle_at_anomaly=math.atan(self.telemetry_eccentricity*math.sin(true_anomaly)/(1+self.telemetry_eccentricity*math.cos(true_anomaly)))
+                #Target velocity (prograde)
+                target_vis_viva=self.calculate_vis_viva(position_at_anomaly,self.target_semimajor_axis)
+                flight_path_angle_at_target=math.acos((math.sqrt(self.gravitational_parameter*target_semi_latus_rectum)/(position_at_anomaly*target_vis_viva)))
             
-            if required_delta_v<min_delta_v:
-                min_delta_v=required_delta_v
+                required_delta_v=math.sqrt(target_vis_viva**2+vis_viva_at_anomaly**2-2*target_vis_viva*vis_viva_at_anomaly*math.cos(flight_path_angle_at_target-flight_path_angle_at_anomaly))
+
+                #Update min delta v
+                if required_delta_v<min_delta_v:
+                    min_delta_v=required_delta_v
+                    min_true_anomaly=true_anomaly
+                    min_position=position_at_anomaly
             
             true_anomaly+=Constants.SIMULATION_TRUE_ANOMALY_STEP
         
-        if min_delta_v is not None:
-            return min_delta_v
+        if min_delta_v <sys.float_info.max:
+            Prograde_Correction=
+            return (min_delta_v,min_position,Prograde_Correction
         else:
             return 0
         
