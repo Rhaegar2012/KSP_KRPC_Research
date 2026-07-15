@@ -97,8 +97,8 @@ class PhysicsComputer():
         target_semi_latus_rectum    =self.target_semimajor_axis*(1-self.target_eccentricity**2)
         true_anomaly=0
         min_delta_v= sys.float_info.max
-        min_true_anomaly=[]
-        min_position=[]
+        min_true_anomaly=0
+        min_position=0
         while true_anomaly<Constants.SIMULATION_TRUE_ANOMALY_AT_APOAPSIS:
             
             position_at_anomaly=telemetry_semi_latus_rectum/(1+self.telemetry_eccentricity*math.cos(true_anomaly))#Change apoapsis for semimajor axis
@@ -118,14 +118,20 @@ class PhysicsComputer():
                     min_delta_v=required_delta_v
                     min_true_anomaly=true_anomaly
                     min_position=position_at_anomaly
+                    min_gamma_new = flight_path_angle_at_target
+                    min_gamma_cur=flight_path_angle_at_anomaly
+                    min_target_vis_viva=target_vis_viva
+                    min_vis_viva_cur=vis_viva_at_anomaly
             
             true_anomaly+=Constants.SIMULATION_TRUE_ANOMALY_STEP
         
         if min_delta_v <sys.float_info.max:
-            Prograde_Correction=
-            return (min_delta_v,min_position,Prograde_Correction
+            delta_v_radial = min_target_vis_viva *math.sin(min_gamma_new)-min_vis_viva_cur*math.sin(min_gamma_cur)
+            delta_v_prograde=min_target_vis_viva*math.cos(min_gamma_new) -min_vis_viva_cur*math.cos(min_gamma_cur)
+            Prograde_Correction=[delta_v_radial,delta_v_prograde,0]
+            return (min_delta_v,min_position,Prograde_Correction)
         else:
-            return 0
+            return None
         
         
             
